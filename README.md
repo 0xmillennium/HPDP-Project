@@ -98,6 +98,9 @@ HPDP Project/
 | RAM | 8 GB |
 | Disk | 10 GB |
 
+> [!IMPORTANT]
+> **Platform Note**: This project was developed on **Windows**. If you're running on **Linux**, you may need to modify escape characters in `docker-compose.yml`. See the [Platform Compatibility](#platform-compatibility-windowslinux) section in Troubleshooting.
+
 ### Required Ports
 
 | Port | Service |
@@ -332,6 +335,41 @@ docker exec hpdpproject-kafka-1 \
   --bootstrap-server localhost:9092 \
   --partitions 1 --replication-factor 1
 ```
+
+### Platform Compatibility (Windows/Linux)
+
+This project was developed on **Windows**, which uses different escape character handling than Linux in Docker Compose files.
+
+**If you encounter errors like:**
+```
+ERROR: Invalid interpolation format for "command" option...
+```
+
+**Apply these fixes to `docker-compose.yml`:**
+
+| Line | Service | Windows (Original) | Linux (Fixed) |
+|------|---------|-------------------|---------------|
+| 6 | namenode | `'\r$/'` | `'\r$$/'` |
+| 77 | hiveserver2 | `'\\r$/'` | `'\r$$/'` |
+| 112 | kafka | `$(/opt/kafka/...)` | `$$(/opt/kafka/...)` |
+
+**Explanation:**
+- Docker Compose interprets `$` as variable interpolation
+- On Linux, use `$$` to escape the literal `$` character
+- On Windows, the shell handles escaping differently
+
+**Quick fix commands for Linux:**
+```bash
+# Fix namenode command (line 6)
+sed -i "s/'\\\\r\$\/'/'\
+\$\$\/'/" docker-compose.yml
+
+# Fix kafka command - escape $() subshell
+sed -i 's/\$(\//\$\$(\//g' docker-compose.yml
+```
+
+Alternatively, manually edit `docker-compose.yml` and change:
+- `$` → `$$` in shell commands where you want a literal dollar sign
 
 ---
 
